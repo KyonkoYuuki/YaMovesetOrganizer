@@ -17,11 +17,11 @@ from yamoveset.panels.main import MainPanel
 from yamoveset.panels.side import SidePanel
 from yamoveset.dlg.combo import ComboInfoDialog
 
-VERSION = '0.2.4'
+VERSION = '0.2.5'
 
 
 class MainWindow(wx.Frame):
-    def __init__(self, parent, title):
+    def __init__(self, parent, title, dirname, filename):
         sys.excepthook = self.exception_hook
         self.locale = wx.Locale(wx.LANGUAGE_ENGLISH)
         self.copied = None
@@ -76,6 +76,9 @@ class MainWindow(wx.Frame):
 
         self.sizer.Layout()
         self.Show()
+
+        if filename:
+            self.load_main_moveset(dirname, filename)
 
     def exception_hook(self, e, value, trace):
         with MultiMessageDialog(self, '', 'Error', ''.join(traceback.format_exception(e, value, trace)), wx.OK) as dlg:
@@ -143,7 +146,7 @@ class MainWindow(wx.Frame):
 
         self.load_files(panel.dirname, code, panel)
 
-    def open_file(self, filename, dirname, panel):
+    def open_file(self, dirname, filename, panel):
         path = Path(os.path.join(dirname, filename))
         if path.is_dir():
             panel.dirname = str(path)
@@ -200,14 +203,14 @@ class MainWindow(wx.Frame):
     def open_main_moveset(self):
         self.open_file_dialog(self.main_panel)
 
-    def load_main_moveset(self, filename, dirname):
-        self.open_file(filename, dirname, self.main_panel)
+    def load_main_moveset(self, dirname, filename):
+        self.open_file(dirname, filename, self.main_panel)
 
     def open_side_moveset(self):
         self.open_file_dialog(self.side_panel)
 
-    def load_side_moveset(self, filename, dirname):
-        self.open_file(filename, dirname, self.side_panel)
+    def load_side_moveset(self, dirname, filename):
+        self.open_file(dirname, filename, self.side_panel)
 
     def save_moveset(self):
         with wx.DirDialog(self, 'Choose directory to save moveset to', self.main_panel.dirname,
@@ -247,5 +250,8 @@ class MainWindow(wx.Frame):
 
 if __name__ == '__main__':
     app = wx.App(False)
-    frame = MainWindow(None, "YaMoveset Organizer v" + VERSION)
+    dirname = filename = None
+    if len(sys.argv) > 1:
+        dirname, filename = os.path.split(sys.argv[1])
+    frame = MainWindow(None, f"YaMoveset Organizer v{VERSION}", dirname, filename)
     app.MainLoop()
