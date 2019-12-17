@@ -20,4 +20,5 @@ This is a simple tool that allows copying/pasting moves from other movesets to c
 0.2.3 - More bug fixes with BAC Entries that contain many animations
 0.2.4 - More bug fixes
 0.2.5 - Added ability to drag files to exe to open them
+0.2.6 - Added support for BACType26
 ```

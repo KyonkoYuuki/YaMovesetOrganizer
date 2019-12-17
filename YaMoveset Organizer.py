@@ -17,7 +17,7 @@ from yamoveset.panels.main import MainPanel
 from yamoveset.panels.side import SidePanel
 from yamoveset.dlg.combo import ComboInfoDialog
 
-VERSION = '0.2.5'
+VERSION = '0.2.6'
 
 
 class MainWindow(wx.Frame):
