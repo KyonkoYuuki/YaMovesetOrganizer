@@ -13,11 +13,12 @@ from wx.lib.dialogs import MultiMessageDialog
 from pyxenoverse.bac import BAC
 from pyxenoverse.bdm import BDM
 from pyxenoverse.ean import EAN
+from pyxenoverse.gui import create_backup
 from yamoveset.panels.main import MainPanel
 from yamoveset.panels.side import SidePanel
 from yamoveset.dlg.combo import ComboInfoDialog
 
-VERSION = '0.2.6'
+VERSION = '0.2.7'
 
 
 class MainWindow(wx.Frame):
@@ -231,13 +232,21 @@ class MainWindow(wx.Frame):
                     warn.ShowModal()
 
         if self.main_panel.bac is not None:
-            self.main_panel.bac.save(os.path.join(path, f'{code}_PLAYER.bac'))
+            bac_filename = f'{code}_PLAYER.bac'
+            create_backup(path, bac_filename)
+            self.main_panel.bac.save(os.path.join(path, bac_filename))
         if self.main_panel.bdm is not None:
-            self.main_panel.bdm.save(os.path.join(path, f'{code}_PLAYER.bdm'))
+            bdm_filename = f'{code}_PLAYER.bdm'
+            create_backup(path, bdm_filename)
+            self.main_panel.bdm.save(os.path.join(path, bdm_filename))
         if self.main_panel.ean is not None:
-            self.main_panel.ean.save(os.path.join(path, f'{code}.ean'))
+            ean_filename = f'{code}.ean'
+            create_backup(path, ean_filename)
+            self.main_panel.ean.save(os.path.join(path, ean_filename))
         if self.main_panel.cam_ean is not None:
-            self.main_panel.cam_ean.save(os.path.join(path, f'{code}.cam.ean'))
+            cam_filename = f'{code}.cam.ean'
+            create_backup(path, cam_filename)
+            self.main_panel.cam_ean.save(os.path.join(path, cam_filename))
 
         msg = f'Saved {code} moveset successfully!'
         self.statusbar.SetStatusText(msg)
