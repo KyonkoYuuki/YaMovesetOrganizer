@@ -22,4 +22,5 @@ This is a simple tool that allows copying/pasting moves from other movesets to c
 0.2.5 - Added ability to drag files to exe to open them
 0.2.6 - Added support for BACType26
 0.2.7 - Add automatic backup creation on saving
+0.2.8 - Added support for BACType27, fixed issue with saving homing movements
 ```
