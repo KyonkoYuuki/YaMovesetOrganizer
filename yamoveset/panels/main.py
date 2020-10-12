@@ -41,7 +41,7 @@ class MainPanel(wx.Panel):
         self.save.Disable()
         self.paste = wx.Button(self, wx.ID_PASTE, "Paste")
         self.paste.Disable()
-        self.add = wx.Button(self, wx.ID_ADD, "Add")
+        self.add = wx.Button(self, wx.ID_ADD, "Add Copy")
         self.add.Disable()
 
         # Entry List
@@ -280,10 +280,14 @@ class MainPanel(wx.Panel):
 
     def on_paste(self, _):
         if not self.parent.copied:
+            with wx.MessageDialog(self, f'No entries are copied from the right panel to Paste') as dlg:
+                dlg.ShowModal()
             return
 
         selected = self.entry_list.GetSelections()
         if not selected:
+            with wx.MessageDialog(self, f'No entries are selected to Paste onto') as dlg:
+                dlg.ShowModal()
             return
 
         copied = pickle.loads(self.parent.copied)
@@ -377,18 +381,14 @@ class MainPanel(wx.Panel):
         #     dlg.ShowModal()
 
     def on_add(self, _):
-
-
         if not self.parent.copied:
+            with wx.MessageDialog(self, f'No entries are copied from the right panel to Add') as dlg:
+                dlg.ShowModal()
             return
 
         copied = pickle.loads(self.parent.copied)
 
-
-
         selected_data = [item for item in copied]
-
-
 
         # Paste entries
         selected_values = []
@@ -399,13 +399,8 @@ class MainPanel(wx.Panel):
             selected_values.append((selected_data[n].index, selected_data[n].get_static_values()))
             copied_values.append(copied_data.get_static_values())
 
+        # same code as in on_paste(), but it compares to the added entry (i really have no idea why this works..)
         for selected_val, copied_val in zip(selected_values, copied_values):
-            # Example:
-            # Item type: Animation
-            # entry: Index
-            # dependency: Type
-            # depend_value: 5
-            # entry_values: {1, 2, 3}
             for item_type, v1 in copied_val.items():
                 if item_type not in [Animation, Hitbox, Camera]:
                     continue
@@ -422,15 +417,14 @@ class MainPanel(wx.Panel):
 
         # Add BAC Entry
         for n, copied_data in enumerate(copied):
+            # add new entries to the end so we don't override important CMN entries
             index = len(self.bac.entries)
             new_entry = Entry(self.bac, index)
             root = self.entry_list.GetRootItem()
             new_entry.paste(copied_data, self.links)
-            self.bac.entries.insert(index, new_entry)
+            self.bac.entries.append(new_entry)
             self.entry_list.AppendItem(
                 root, f'{new_entry.index}: {KNOWN_ENTRIES.get(new_entry.index, "Unknown")}', data=new_entry)
-
-
 
         # Display message
         msg = f'Added {len(copied)} entry(s)'
