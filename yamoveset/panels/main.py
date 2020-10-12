@@ -10,6 +10,7 @@ from yamoveset import KNOWN_ENTRIES, BLACKLISTED_WORDS
 from yamoveset.dlg.changed import ChangedDialog
 from pyxenoverse.gui.file_drop_target import FileDropTarget
 from pyxenoverse.bac.sub_entry import ITEM_TYPES
+from pyxenoverse.bac.entry import Entry
 from pyxenoverse.bac.types.animation import Animation
 from pyxenoverse.bac.types.camera import Camera
 from pyxenoverse.bac.types.hitbox import Hitbox
@@ -40,6 +41,8 @@ class MainPanel(wx.Panel):
         self.save.Disable()
         self.paste = wx.Button(self, wx.ID_PASTE, "Paste")
         self.paste.Disable()
+        self.add = wx.Button(self, wx.ID_ADD, "Add")
+        self.add.Disable()
 
         # Entry List
         self.entry_list = TreeListCtrl(self, style=TL_MULTIPLE)
@@ -50,6 +53,7 @@ class MainPanel(wx.Panel):
         self.Bind(wx.EVT_BUTTON, self.on_open, id=wx.ID_OPEN)
         self.Bind(wx.EVT_BUTTON, self.on_save, id=wx.ID_SAVE)
         self.Bind(wx.EVT_BUTTON, self.on_paste, id=wx.ID_PASTE)
+        self.Bind(wx.EVT_BUTTON, self.on_add, id=wx.ID_ADD)
         self.Bind(wx.EVT_MENU, self.on_paste, id=wx.ID_PASTE)
         accelerator_table = wx.AcceleratorTable([
             (wx.ACCEL_CTRL, ord('v'), wx.ID_PASTE),
@@ -65,6 +69,8 @@ class MainPanel(wx.Panel):
         button_sizer.Add(self.save)
         button_sizer.AddSpacer(5)
         button_sizer.Add(self.paste)
+        button_sizer.AddSpacer(5)
+        button_sizer.Add(self.add)
 
         # Use some sizers to see layout options
         sizer = wx.BoxSizer(wx.VERTICAL)
@@ -92,6 +98,7 @@ class MainPanel(wx.Panel):
                 root, f'{entry.index}: {KNOWN_ENTRIES.get(entry.index, "Unknown")}', data=entry)
         self.save.Enable()
         self.paste.Enable()
+        self.add.Enable()
 
     def on_right_click(self, _):
         selected = self.entry_list.GetSelections()
@@ -368,3 +375,69 @@ class MainPanel(wx.Panel):
         # with MultiMessageDialog(
         #         self, 'The following entries in the listed files have been changed:', msg, changed_msg, wx.OK) as dlg:
         #     dlg.ShowModal()
+
+    def on_add(self, _):
+
+
+        if not self.parent.copied:
+            return
+
+        copied = pickle.loads(self.parent.copied)
+
+
+
+        selected_data = [item for item in copied]
+
+
+
+        # Paste entries
+        selected_values = []
+        copied_values = []
+        changed_values = defaultdict(list)
+
+        for n, copied_data in enumerate(copied):
+            selected_values.append((selected_data[n].index, selected_data[n].get_static_values()))
+            copied_values.append(copied_data.get_static_values())
+
+        for selected_val, copied_val in zip(selected_values, copied_values):
+            # Example:
+            # Item type: Animation
+            # entry: Index
+            # dependency: Type
+            # depend_value: 5
+            # entry_values: {1, 2, 3}
+            for item_type, v1 in copied_val.items():
+                if item_type not in [Animation, Hitbox, Camera]:
+                    continue
+                for entry_pair, v2 in v1.items():
+                    for depend_value, entry_values in v2.items():
+                        # Skip if dependency isn't a character
+                        if item_type.dependencies[entry_pair][depend_value] != 'Character':
+                            continue
+                        if not self.get_changed_values(
+                                changed_values, item_type, entry_pair, depend_value, entry_values,
+                                selected_val, selected_data):
+                            return
+
+
+        # Add BAC Entry
+        for n, copied_data in enumerate(copied):
+            index = len(self.bac.entries)
+            new_entry = Entry(self.bac, index)
+            root = self.entry_list.GetRootItem()
+            new_entry.paste(copied_data, self.links)
+            self.bac.entries.insert(index, new_entry)
+            self.entry_list.AppendItem(
+                root, f'{new_entry.index}: {KNOWN_ENTRIES.get(new_entry.index, "Unknown")}', data=new_entry)
+
+
+
+        # Display message
+        msg = f'Added {len(copied)} entry(s)'
+        pub.sendMessage('set_status_bar', text=msg)
+        with ChangedDialog(self, changed_values) as dlg:
+            dlg.ShowModal()
+
+
+
+
