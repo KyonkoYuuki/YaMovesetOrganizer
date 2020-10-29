@@ -60,6 +60,7 @@ class MainPanel(wx.Panel):
         ])
         self.entry_list.SetAcceleratorTable(accelerator_table)
         self.SetDropTarget(FileDropTarget(self, "load_main_moveset"))
+        pub.subscribe(self.on_enable_paste, 'enable_paste')
 
 
         # Button Sizer
@@ -97,8 +98,8 @@ class MainPanel(wx.Panel):
             self.entry_list.AppendItem(
                 root, f'{entry.index}: {KNOWN_ENTRIES.get(entry.index, "Unknown")}', data=entry)
         self.save.Enable()
-        self.paste.Enable()
-        self.add.Enable()
+        self.paste.Disable()
+        self.add.Disable()
 
     def on_right_click(self, _):
         selected = self.entry_list.GetSelections()
@@ -278,16 +279,16 @@ class MainPanel(wx.Panel):
             n += 1
         return True
 
+    def on_enable_paste(self, enabled):
+        self.paste.Enable(enabled)
+        self.add.Enable(enabled)
+
     def on_paste(self, _):
         if not self.parent.copied:
-            with wx.MessageDialog(self, f'No entries are copied from the right panel to Paste') as dlg:
-                dlg.ShowModal()
             return
 
         selected = self.entry_list.GetSelections()
         if not selected:
-            with wx.MessageDialog(self, f'No entries are selected to Paste onto') as dlg:
-                dlg.ShowModal()
             return
 
         copied = pickle.loads(self.parent.copied)
@@ -388,19 +389,13 @@ class MainPanel(wx.Panel):
 
         copied = pickle.loads(self.parent.copied)
 
-        selected_data = [item for item in copied]
-
         # Paste entries
-        selected_values = []
-        copied_values = []
         changed_values = defaultdict(list)
-
-        for n, copied_data in enumerate(copied):
-            selected_values.append((selected_data[n].index, selected_data[n].get_static_values()))
-            copied_values.append(copied_data.get_static_values())
+        index_start = len(self.bac.entries)
 
         # same code as in on_paste(), but it compares to the added entry (i really have no idea why this works..)
-        for selected_val, copied_val in zip(selected_values, copied_values):
+        for n, copy in enumerate(copied):
+            copied_val = copy.get_static_values()
             for item_type, v1 in copied_val.items():
                 if item_type not in [Animation, Hitbox, Camera]:
                     continue
@@ -409,29 +404,36 @@ class MainPanel(wx.Panel):
                         # Skip if dependency isn't a character
                         if item_type.dependencies[entry_pair][depend_value] != 'Character':
                             continue
-                        if not self.get_changed_values(
-                                changed_values, item_type, entry_pair, depend_value, entry_values,
-                                selected_val, selected_data):
-                            return
 
+                        for old_value in entry_values:
+                            # If we have a link already, use that
+                            if old_value in self.links[item_type][entry_pair][depend_value]:
+                                new_value = self.links[item_type][entry_pair][depend_value][old_value]
+                                # if (old_value, new_value) in list(zip(*changed_values[item_type])):
+                                self.changed_value_message(index_start + n, changed_values, item_type, old_value, new_value, False)
+                                continue
+                            # Otherwise, just create a new one
+                            new_value = self.create_new_index(item_type)
+                            self.changed_value_message(index_start + n, changed_values, item_type, old_value, new_value)
+
+                            # Copy EAN/BDM entries
+                            if not self.copy_index(item_type, old_value, new_value):
+                                return
+                            self.links[item_type][entry_pair][depend_value][old_value] = new_value
 
         # Add BAC Entry
         for n, copied_data in enumerate(copied):
             # add new entries to the end so we don't override important CMN entries
-            index = len(self.bac.entries)
-            new_entry = Entry(self.bac, index)
+            new_entry = Entry(self.bac, index_start + n)
             root = self.entry_list.GetRootItem()
             new_entry.paste(copied_data, self.links)
             self.bac.entries.append(new_entry)
-            self.entry_list.AppendItem(
+            new_item = self.entry_list.AppendItem(
                 root, f'{new_entry.index}: {KNOWN_ENTRIES.get(new_entry.index, "Unknown")}', data=new_entry)
+            self.entry_list.Select(new_item)
 
         # Display message
-        msg = f'Added {len(copied)} entry(s)'
+        msg = f'Added {len(copied)} entry(s) at index {index_start}'
         pub.sendMessage('set_status_bar', text=msg)
         with ChangedDialog(self, changed_values) as dlg:
             dlg.ShowModal()
-
-
-
-

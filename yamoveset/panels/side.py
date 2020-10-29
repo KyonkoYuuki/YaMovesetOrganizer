@@ -76,6 +76,7 @@ class SidePanel(wx.Panel):
                 root, f'{entry.index}: {KNOWN_ENTRIES.get(entry.index, "Unknown")}', data=entry)
         self.copy.Enable()
         self.parent.copied = None
+        pub.sendMessage('enable_paste', enabled=False)
 
     def on_right_click(self, _):
         selected = self.entry_list.GetSelections()
@@ -96,11 +97,11 @@ class SidePanel(wx.Panel):
         while item.IsOk():
             self.entry_list.SetItemText(item, 1, '')
             item = self.entry_list.GetNextItem(item)
-
         # Check and add to copied
         copied = []
         for item in selected:
             copied.append(self.entry_list.GetItemData(item))
             self.entry_list.SetItemText(item, 1, CHECK)
         self.parent.copied = pickle.dumps(copied)
+        pub.sendMessage('enable_paste', enabled=True)
         pub.sendMessage('set_status_bar', text=f'Copied {len(selected)} entries')
